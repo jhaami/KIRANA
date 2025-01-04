@@ -8,18 +8,18 @@ import customizationImg from "../assets/images/customization.png";
 const ServiceData = [
   {
     imgUrl: weatherImg,
-    title: "Farming News Updates",
-    desc: 'Stay up-to-date with the latest in agriculture through "Farming News Updates," featuring breakthroughs in farming technology, market trends, and policy changes.',
+    title: "Kirana News Updates",
+    desc: 'Stay up-to-date with the latest in shopping through "Kirana News Updates," featuring breakthroughs in Kirana technology, market trends, and policy changes.',
   },
   {
     imgUrl: guideImg,
-    title: "Farming Articles",
-    desc: 'Stay up-to-date with the latest in agriculture through "Farming News Updates," featuring breakthroughs in farming technology, market trends, and policy changes.',
+    title: "Kirana Articles",
+    desc: 'Stay up-to-date with the latest in shopping through "Kirana News Updates," featuring breakthroughs in Kirana technology, market trends, and policy changes.',
   },
   {
     imgUrl: customizationImg,
     title: "Fast and Easy Payment",
-    desc: 'Stay up-to-date with the latest in agriculture through "Farming News Updates," featuring breakthroughs in farming technology, market trends, and policy changes.',
+    desc: 'Stay up-to-date with the latest in shopping through "Kirana News Updates," featuring breakthroughs in Kirana technology, market trends, and policy changes.',
   },
 ];
 
