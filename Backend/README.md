@@ -152,3 +152,18 @@ To run this project, you will need to add the following environment variables to
 
 
 - [@Jenish](https://github.com/Jemnish)
+
+
+
+## **Security Features**
+
+1. **Password Encryption**: Uses Bcrypt to securely hash passwords.
+2. **Brute-Force Prevention**: Rate-limiting to prevent excessive requests.
+3. **Session Management**: Secure session creation and expiration policies.
+4. **Access Control**: Role-Based Access Control (RBAC) for Buyer/Seller roles.
+5. **ReCAPTCHA Verification**: Protects against automated bots.
+
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jhaami/KIRANA.git
