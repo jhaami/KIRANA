@@ -5,7 +5,7 @@ import { Button } from "reactstrap";
 import { toast } from "react-toastify";
 import { FormGroup, ListGroup, ListGroupItem } from "react-bootstrap";
 import { useParams } from "react-router-dom";
-import { addReview, addtoCart } from "../../api/Api";
+import { addtoCart } from "../../api/Api";
 
 const Buying = ({ product }) => {
   const [buyingName, setBuyingName] = useState("");

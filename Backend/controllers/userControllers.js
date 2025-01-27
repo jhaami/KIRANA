@@ -4,82 +4,130 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const productModel = require("../models/productModel");
 const sentOtp = require("../services/sendOTP");
+const validatePassword = require("../utils/passwordValidator");
+const { encrypt, decrypt } = require("../utils/encryptionHelper");
 
 // Function to create a new user
 const createUser = async (req, res) => {
-  // 1. Log the incoming data from the request
-  console.log(req.body);
+  // 1. Log the incoming data
+  console.log("Request body:", req.body);
 
-  // 2. Extract the necessary data from the request body
-  const { fullname, phone, usertype, username, password } = req.body;
+  // 2. Extract necessary data from the request body
+  const { fullname, phone, username, password, role = "Buyer" } = req.body;
 
-  // 3. Validate the extracted data (ensure no field is empty)
-  if (!phone || !fullname || !username || !password || !usertype) {
+  // 3. Validate required fields
+  if (!fullname || !phone || !username || !password) {
     return res.status(400).json({
       success: false,
-      message: "Please enter all the fields!!",
+      message: "Please provide all required fields!",
     });
   }
 
-  // 3.1. Determine if the user is an admin based on the usertype
-  let isAdmin = usertype === "Seller";
+  const createUser = async (req, res) => {
+    try {
+      const { fullname, phone, username, password, usertype } = req.body;
+  
+      // Encrypt sensitive fields
+      const encryptedPhone = encrypt(phone);
+  
+      const newUser = new userModel({
+        fullname,
+        phone: encryptedPhone, // Save encrypted phone
+        username,
+        password: hashedPassword,
+        usertype,
+      });
+  
+      await newUser.save();
+      res.status(201).json({ success: true, message: "User created successfully!" });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ success: false, message: "Internal server error." });
+    }
+  };
 
+  
+
+const getUserDetails = async (req, res) => {
   try {
-    // 4. Check if a user with the same username already exists
-    const existingUser = await userModel.findOne({ username: username });
-    if (existingUser) {
-      return res.json({
-        success: false,
-        message: "Username already in use!!!",
-      });
-      // return res.status(400).json({
-      //   success: false,
-      //   message: "Username already in use!!!",
-      // });
+    const user = await userModel.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found!" });
     }
 
-    // 4.1. Check if a user with the same phone number already exists
-    const existingPhone = await userModel.findOne({ phone: phone });
-    if (existingPhone) {
-      // return res.status(400).json({
-      //   success: false,
-      //   message: "Phone number already registered!!!",
-      // });
-      return res.json({
-        success: false,
-        message: "Phone number already registered!!!",
-      });
-    }
+    // Decrypt sensitive fields
+    const decryptedPhone = decrypt(user.phone);
 
-    // 5. Hash the password to secure it before storing
-    const randomSalt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, randomSalt);
-
-    // 6. Create a new user with the provided data
-    const newUser = new userModel({
-      fullname: fullname,
-      phone: phone,
-      username: username,
-      password: hashedPassword,
-      isAdmin: isAdmin,
-    });
-
-    // 7. Save the new user to the database
-    await newUser.save();
-
-    // 8. Send a success response back to the client
     res.status(200).json({
       success: true,
-      message: "User created successfully",
+      user: { ...user._doc, phone: decryptedPhone },
     });
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching user details:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+  // 4. Validate role (optional but recommended)
+  const validRoles = ["Admin", "Seller", "Buyer"];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid role specified!",
+    });
+  }
+
+  try {
+    // 5. Check if a user with the same username already exists
+    const existingUser = await userModel.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Username is already in use!",
+      });
+    }
+
+    // 6. Check if a user with the same phone number already exists
+    const existingPhone = await userModel.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is already registered!",
+      });
+    }
+
+    // 7. Hash the password for security
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 8. Create a new user with the provided data and role
+    const newUser = new userModel({
+      fullname,
+      phone,
+      username,
+      password: hashedPassword,
+      role, // Assign role here
+    });
+
+    // 9. Save the new user to the database
+    await newUser.save();
+
+    // 10. Send a success response to the client
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully!",
+    });
+  } catch (error) {
+    console.error("Error in createUser:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Internal server error!",
     });
   }
 };
+
+
 
 // Function to log in a user
 const loginUser = async (req, res) => {
@@ -517,3 +565,14 @@ module.exports = {
   verifyOtpAndSetPassword,
   getMe,
 };
+
+
+
+
+
+
+
+
+
+
+

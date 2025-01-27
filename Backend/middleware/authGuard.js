@@ -1,12 +1,26 @@
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 
+// Brute-force prevention: Rate Limiter
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    message: "Too many authentication attempts. Please try again later.",
+  },
+  standardHeaders: true, // Send rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Authentication Guard Middleware
 const authGuard = (req, res, next) => {
-  // check incomming data
-  console.log(req.headers);
-  // get authorization data from headers
+  console.log("Incoming Headers:", req.headers);
+
+  // Get the Authorization header
   const authHeader = req.headers.authorization;
 
-  // check or validate
+  // Check if the Authorization header is present
   if (!authHeader) {
     return res.status(400).json({
       success: false,
@@ -14,10 +28,10 @@ const authGuard = (req, res, next) => {
     });
   }
 
-  // Split the data (Format : 'Bearer token-sdfg')
+  // Extract the token (Format: Bearer <token>)
   const token = authHeader.split(" ")[1];
 
-  // if token not found stop the process (res)
+  // Check if the token exists
   if (!token || token === "") {
     return res.status(400).json({
       success: false,
@@ -25,21 +39,25 @@ const authGuard = (req, res, next) => {
     });
   }
 
-  // verify
+  // Verify the token
   try {
-    const decodeUserData = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decodeUserData;
+    const decodedUserData = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Attach decoded data to the request object
+    req.user = decodedUserData;
+
+    // Proceed to the next middleware or route handler
     next();
   } catch (error) {
-    res.status(400).json({
+    console.error("Authentication Error:", error);
+    res.status(401).json({
       success: false,
       message: "Not Authenticated!",
     });
   }
-  // if verified : next (function in controller)
-  // not verified : not auth
 };
 
 module.exports = {
   authGuard,
+  authRateLimiter,
 };

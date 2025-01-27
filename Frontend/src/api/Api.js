@@ -63,3 +63,5 @@ export const khaltiPay = (data) => Api.post("/api/cart/initiate-payment", data);
 
 export const updateProduct = (id, data) =>
   Api.put(`/api/product/update_product/${id}`, data);
+
+

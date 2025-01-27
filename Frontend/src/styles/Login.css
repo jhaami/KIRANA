@@ -40,13 +40,13 @@
 }
 
 .login__form{
-    width: 50%;
+    width: 57%;
 }
 
 
 .login__form input{
     width: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 0.8rem;
     border-radius: 5px;
     border: none;
     font-size: 1rem;

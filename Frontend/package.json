@@ -13,10 +13,11 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.4",
     "react-dom": "^18.2.0",
+    "react-google-recaptcha": "^3.1.0",
     "react-responsive": "^10.0.0",
     "react-responsive-masonry": "^2.1.7",
     "react-router-dom": "^6.6.1",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "react-slick": "^0.29.0",
     "react-toastify": "10.0.5",
     "reactstrap": "^9.2.2",
@@ -53,6 +54,7 @@
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
     "identity-obj-proxy": "^3.0.0",
-    "jest": "^27.5.1"
+    "jest": "^27.5.1",
+    "webpack": "^5.97.1"
   }
 }

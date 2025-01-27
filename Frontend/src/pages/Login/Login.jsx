@@ -1,70 +1,80 @@
+
+
 import React, { useState } from "react";
 import { toast } from "react-toastify";
-
 import { Container, Row, Col, Form, FormGroup, Button } from "reactstrap";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/Login.css";
 import { loginUserApi } from "../../api/Api";
-
 import loginImg from "../../assets/images/login_cover.png";
 import userIcon from "../../assets/images/user.png";
+import Captcha from "../Captcha/Captcha"; // Your reCAPTCHA component
 
 const Login = () => {
   const navigate = useNavigate();
-  // Making a use sate
+
+  // State for username, password, and CAPTCHA token
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaToken, setCaptchaToken] = useState(null);
 
-  // Making an error state
+  // State for error messages
   const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  // validation
+  // Validation function
   const validation = () => {
     let isValid = true;
+
     if (username.trim() === "") {
       setUsernameError("Username is required");
       isValid = false;
     }
+
     if (password.trim() === "") {
       setPasswordError("Password is required");
       isValid = false;
     }
+
+    if (!captchaToken) {
+      toast.error("Please complete the CAPTCHA.");
+      isValid = false;
+    }
+
     return isValid;
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate form inputs
     const isValidated = validation();
     if (!isValidated) {
       return;
     }
 
+    // Data to send to the backend
     const data = {
       username: username,
       password: password,
+      captchaToken: captchaToken, // Include CAPTCHA token
     };
 
     try {
-      const res = await loginUserApi(data);
-      console.log(res.data.message);
+      const res = await loginUserApi(data); // API call to backend
 
       if (res.data.success === false) {
-        toast.error(res.data.message);
+        toast.error(res.data.message); // Show error toast if login fails
       } else {
-        console.log("ok");
+        toast.success(res.data.message); // Show success toast if login succeeds
 
-        toast.success(res.data.message);
-
+        // Store the token and user data in localStorage
         localStorage.setItem("token", res.data.token);
+        localStorage.setItem("userData", JSON.stringify(res.data.userData));
 
-        const convertedData = JSON.stringify(res.data.userData);
-        localStorage.setItem("userData", convertedData);
-
-        const user = JSON.parse(localStorage.getItem("userData"));
-        console.log(user.isAdmin);
-
+        // Navigate based on user role
+        const user = res.data.userData;
         if (user.isAdmin) {
           navigate("/admin/dashboard");
         } else {
@@ -72,7 +82,7 @@ const Login = () => {
         }
       }
     } catch (error) {
-      console.error("Login failed", error);
+      console.error("Login failed:", error);
       toast.error("An error occurred. Please try again.");
     }
   };
@@ -93,16 +103,17 @@ const Login = () => {
                 </div>
                 <h2>Login</h2>
 
-                <Form>
+                <Form onSubmit={handleSubmit}>
                   <FormGroup>
                     <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Username"
+                      value={username}
                       onChange={(e) => {
                         setUsername(e.target.value);
                         setUsernameError("");
                       }}
-                      type="text"
-                      className="form-control"
-                      placeholder="Username"
                     />
                     {usernameError && (
                       <p className="text__danger">{usernameError}</p>
@@ -110,24 +121,22 @@ const Login = () => {
                   </FormGroup>
                   <FormGroup>
                     <input
+                      type="password"
+                      className="form-control"
+                      placeholder="Password"
+                      value={password}
                       onChange={(e) => {
                         setPassword(e.target.value);
                         setPasswordError("");
                       }}
-                      type="text"
-                      className="form-control"
-                      placeholder="Password"
                     />
                     {passwordError && (
                       <p className="text__danger">{passwordError}</p>
                     )}
                   </FormGroup>
+                  <Captcha onCaptchaChange={(value) => setCaptchaToken(value)} /> {/* Capture CAPTCHA token */}
 
-                  <Button
-                    className="btn secondary__btn auth__btn "
-                    type="submit"
-                    onClick={handleSubmit}
-                  >
+                  <Button className="btn secondary__btn auth__btn" type="submit">
                     Login
                   </Button>
                 </Form>

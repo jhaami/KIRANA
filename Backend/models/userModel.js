@@ -11,15 +11,19 @@ const userSchema = new mongoose.Schema({
     unique: true,
   },
   phone: {
-    type: Number,
-    min: 10,
+    type: String, // Changed to String to ensure flexibility for country codes
     required: true,
     unique: true,
   },
   password: {
     type: String,
-    min: 6,
+    minLength: 6,
     required: true,
+  },
+  role: {
+    type: String,
+    enum: ["Admin", "Seller", "Buyer"], // Restrict role values to these options
+    default: "Buyer", // Default role is "Buyer"
   },
   orders: {
     type: Array,
@@ -33,7 +37,6 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-
   resetPasswordOTP: {
     type: Number,
     default: null,
@@ -44,6 +47,6 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-// Create a collection in mongodb with the name users
+// Create a collection in MongoDB with the name "users"
 const User = mongoose.model("users", userSchema);
 module.exports = User;
