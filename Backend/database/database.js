@@ -8,7 +8,7 @@ dotenv.config();
 const databaseConnection = async () => {
   try {
     // Connect to the database
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONOGODB_CLOUD);
     console.log("✅ Database connected successfully!");
 
     // Event listeners for additional connection status handling
@@ -33,7 +33,7 @@ const databaseConnection = async () => {
 // Function to retry connection in case of disconnection
 const connectWithRetry = () => {
   setTimeout(() => {
-    mongoose.connect(process.env.MONGO_URI)
+    mongoose.connect(process.env.MONOGODB_CLOUD)
       .then(() => console.log("🔄 Reconnected to the database successfully!"))
       .catch((err) =>
         console.error("❌ Failed to reconnect to the database:", err)

@@ -1,33 +1,37 @@
+
 const router = require("express").Router();
 const userController = require("../controllers/userControllers");
-const { authGuard } = require("../middleware/authGuard"); // Import authGuard middleware
+const { authGuard, authRateLimiter } = require("../middleware/authGuard"); // Import authGuard middleware
 const rbac = require("../middleware/rbac"); // Import RBAC middleware
 
-// Creating user registration route (open to everyone)
+// User Registration with Email Confirmation
 router.post("/create", userController.createUser);
 
-// Creating user login route (open to everyone)
-router.post("/login", userController.loginUser);
+// Email Confirmation Route
+router.get("/confirm-email", userController.confirmEmail);
 
-// Creating user update route (protected, accessible by Admin and the user themselves)
+// User Login (Rate Limited)
+router.post("/login", authRateLimiter, userController.loginUser);
+
+// Update User (Protected: Admin, Buyer, Seller)
 router.put("/update", authGuard, rbac(["Admin", "Buyer", "Seller"]), userController.updateUserDetails);
 
-// Creating user delete route (protected, accessible only by Admin)
+// Delete User (Protected: Admin Only)
 router.delete("/delete", authGuard, rbac(["Admin"]), userController.userDelete);
 
-// Creating user details route (protected, accessible by Admin and the user themselves)
+// Get User Details (Protected: Admin, Buyer, Seller)
 router.get("/details", authGuard, rbac(["Admin", "Buyer", "Seller"]), userController.getUserDetails);
 
-// Creating user orders route (protected, accessible by Buyers only)
+// User Orders (Protected: Buyers Only)
 router.post("/orders", authGuard, rbac(["Buyer"]), userController.orders);
 
-// Forgot password route (open to everyone)
+// Forgot Password (Open to everyone)
 router.post("/forgot_password", userController.forgotPassword);
 
-// Verify OTP and set password route (open to everyone)
+// Verify OTP and Set New Password
 router.post("/verify_otp", userController.verifyOtpAndSetPassword);
 
-// Getting current logged-in user details (protected, accessible by all authenticated users)
+// Get Logged-in User Details (Protected: All Authenticated Users)
 router.get("/getMe", authGuard, rbac(["Admin", "Buyer", "Seller"]), userController.getMe);
 
 module.exports = router;

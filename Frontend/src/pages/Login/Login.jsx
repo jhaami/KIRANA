@@ -1,5 +1,4 @@
 
-
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { Container, Row, Col, Form, FormGroup, Button } from "reactstrap";
@@ -64,22 +63,29 @@ const Login = () => {
     try {
       const res = await loginUserApi(data); // API call to backend
 
-      if (res.data.success === false) {
-        toast.error(res.data.message); // Show error toast if login fails
+      if (!res.data || res.data.success === false) {
+        toast.error(res.data?.message || "Login failed. Please try again."); // Show error toast if login fails
+        return;
+      }
+
+      toast.success(res.data.message); // Show success toast if login succeeds
+
+      // Ensure userData exists before proceeding
+      const user = res.data.userData;
+      if (!user) {
+        toast.error("Invalid response from the server. Please contact support.");
+        return;
+      }
+
+      // Store the token and user data in localStorage
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userData", JSON.stringify(user));
+
+      // Navigate based on user role
+      if (user.isAdmin) {
+        navigate("/admin/dashboard");
       } else {
-        toast.success(res.data.message); // Show success toast if login succeeds
-
-        // Store the token and user data in localStorage
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("userData", JSON.stringify(res.data.userData));
-
-        // Navigate based on user role
-        const user = res.data.userData;
-        if (user.isAdmin) {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/home");
-        }
+        navigate("/home");
       }
     } catch (error) {
       console.error("Login failed:", error);

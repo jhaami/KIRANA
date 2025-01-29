@@ -164,6 +164,20 @@ To run this project, you will need to add the following environment variables to
 5. **ReCAPTCHA Verification**: Protects against automated bots.
 
 
+
+## **Environment Variables**
+
+Create a `.env` file in the root of the backend directory with the following:
+
+```plaintext
+PORT=5000
+MONOGODB_CLOUD=your-mongodb-connection-string
+JWT_SECRET=your-jwt-secret-key
+ENCRYPTION_KEY=your-32-character-secret-key
+RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key
+```git add README.md
+
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/jhaami/KIRANA.git

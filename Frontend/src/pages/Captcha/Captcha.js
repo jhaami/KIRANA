@@ -18,7 +18,7 @@ const Captcha = ({ onCaptchaChange }) => {
   return (
     <div>
       <ReCAPTCHA
-          sitekey={process.env.REACT_APP_RECAPTCHA_SITE_KEY} // Replace with your actual Site Key
+          sitekey='6LdpY8IqAAAAAMFnDUHzzEVJejyfdBRlSbIRHUXw' // Replace with your actual Site Key
         onChange={handleCaptchaChange}
       />
       {!captchaVerified && (

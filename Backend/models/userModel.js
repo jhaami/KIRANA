@@ -20,6 +20,27 @@ const userSchema = new mongoose.Schema({
     minLength: 6,
     required: true,
   },
+  passwordHistory: {
+    type: [String], // Array to store hashes of old passwords
+    default: [],
+  },
+  email: {
+  type: String,
+  required: true,
+  unique: true,
+},
+emailToken: {
+  type: String,
+  default: null,
+},
+isVerified: {
+  type: Boolean,
+  default: false,
+},
+  passwordLastUpdated: {
+    type: Date,
+    default: Date.now, // Automatically sets the creation date
+  },
   role: {
     type: String,
     enum: ["Admin", "Seller", "Buyer"], // Restrict role values to these options

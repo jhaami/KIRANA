@@ -157,10 +157,7 @@ const addReview = async (req, res) => {
       success: false,
       message: "Please enter all the fields correctly!",
     });
-    // return res.status(401).json({
-    //   success: false,
-    //   message: "Please enter all the fields correctly!",
-    // });
+    
   }
 
   try {
@@ -171,10 +168,7 @@ const addReview = async (req, res) => {
         success: false,
         message: "Product not found",
       });
-      // return res.status(404).json({
-      //   success: false,
-      //   message: "Product not found",
-      // });
+      
     }
 
     // Create a new review object

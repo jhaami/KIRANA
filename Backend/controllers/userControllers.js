@@ -1,4 +1,5 @@
 // Importing required modules and models
+const { validationResult } = require("express-validator");
 const userModel = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -6,128 +7,162 @@ const productModel = require("../models/productModel");
 const sentOtp = require("../services/sendOTP");
 const validatePassword = require("../utils/passwordValidator");
 const { encrypt, decrypt } = require("../utils/encryptionHelper");
+const { sanitize } = require("../utils/sanitizer"); // Custom sanitizer utility to sanitize inputs
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
-// Function to create a new user
-const createUser = async (req, res) => {
-  // 1. Log the incoming data
-  console.log("Request body:", req.body);
 
-  // 2. Extract necessary data from the request body
-  const { fullname, phone, username, password, role = "Buyer" } = req.body;
-
-  // 3. Validate required fields
-  if (!fullname || !phone || !username || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide all required fields!",
-    });
-  }
-
-  const createUser = async (req, res) => {
-    try {
-      const { fullname, phone, username, password, usertype } = req.body;
-  
-      // Encrypt sensitive fields
-      const encryptedPhone = encrypt(phone);
-  
-      const newUser = new userModel({
-        fullname,
-        phone: encryptedPhone, // Save encrypted phone
-        username,
-        password: hashedPassword,
-        usertype,
-      });
-  
-      await newUser.save();
-      res.status(201).json({ success: true, message: "User created successfully!" });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ success: false, message: "Internal server error." });
-    }
-  };
-
-  
-
+// Function to fetch user details
 const getUserDetails = async (req, res) => {
   try {
+    // Fetch user details using the ID from the request parameters
     const user = await userModel.findById(req.params.id);
 
+    // If the user is not found, send a 404 error response
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found!" });
     }
 
-    // Decrypt sensitive fields
+    // Decrypt sensitive fields (e.g., phone number)
     const decryptedPhone = decrypt(user.phone);
 
+    // Send the user data as a response
     res.status(200).json({
       success: true,
-      user: { ...user._doc, phone: decryptedPhone },
+      user: { ...user._doc, phone: decryptedPhone }, // Include decrypted phone in the response
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
+
+    // Send a generic error response for unexpected server issues
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
-  // 4. Validate role (optional but recommended)
-  const validRoles = ["Admin", "Seller", "Buyer"];
-  if (!validRoles.includes(role)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid role specified!",
-    });
-  }
+// Function to SMTP
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: process.env.SMTP_EMAIL, // Your Gmail address
+    pass: process.env.SMTP_PASSWORD, // Your generated App Password
+  },
+});
 
+//function to createUser
+const createUser = async (req, res) => {
   try {
-    // 5. Check if a user with the same username already exists
-    const existingUser = await userModel.findOne({ username });
+    const { fullname, phone, email, username, password, role = "Buyer" } = req.body;
+
+    // 🔹 Validate required fields
+    if (!fullname || !phone || !email || !username || !password) {
+      return res.status(400).json({ success: false, message: "All fields are required!" });
+    }
+
+     // 🔹 Validate password strength
+    if (!validatePassword(password)) {
+      return res.status(400).json({ success: false, message: "Weak password! Use a mix of letters, numbers, and symbols." });
+  }  
+
+    // 🔹 Check if username, email, or phone already exists
+    const [existingUser, existingEmail, existingPhone] = await Promise.all([
+      userModel.findOne({ username }),
+      userModel.findOne({ email }),
+      userModel.findOne({ phone }),
+    ]);
+
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: "Username is already in use!",
-      });
+      return res.status(400).json({ success: false, message: "Username already in use!" });
     }
-
-    // 6. Check if a user with the same phone number already exists
-    const existingPhone = await userModel.findOne({ phone });
+    if (existingEmail) {
+      return res.status(400).json({ success: false, message: "Email already registered!" });
+    }
     if (existingPhone) {
-      return res.status(400).json({
-        success: false,
-        message: "Phone number is already registered!",
-      });
+      return res.status(400).json({ success: false, message: "Phone number already registered!" });
     }
 
-    // 7. Hash the password for security
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // 🔹 Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 8. Create a new user with the provided data and role
+    // 🔹 Generate email confirmation token
+    const emailToken = crypto.randomBytes(32).toString("hex");
+
+    // 🔹 Create new user
     const newUser = new userModel({
       fullname,
       phone,
+      email,
       username,
       password: hashedPassword,
-      role, // Assign role here
+      role,
+      emailToken,
+      isVerified: false,
     });
 
-    // 9. Save the new user to the database
     await newUser.save();
 
-    // 10. Send a success response to the client
+    // 🔹 Send confirmation email
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
+
+    const confirmationUrl = `${process.env.CLIENT_URL}/confirm-email?token=${emailToken}`;
+    const mailOptions = {
+      from: `"Kirana Support" <${process.env.SMTP_EMAIL}>`,
+      to: email,
+      subject: "Email Confirmation - Your Account",
+      html: `
+        <h2>Welcome to Kirana!</h2>
+        <p>Hi ${fullname},</p>
+        <p>Thank you for registering. Please confirm your email by clicking the link below:</p>
+        <a href="${confirmationUrl}" target="_blank">Confirm Email</a>
+        <p>If you did not create an account, please ignore this email.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.status(201).json({
       success: true,
-      message: "User registered successfully!",
+      message: "User created successfully! Please check your email to confirm your account.",
     });
   } catch (error) {
-    console.error("Error in createUser:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error!",
-    });
+    console.error("❌ Error creating user:", error);
+    res.status(500).json({ success: false, message: "Internal server error!" });
   }
 };
 
+// Function to confirm email
+const confirmEmail = async (req, res) => {
+  const { token } = req.query;
 
+  if (!token) {
+    return res.status(400).json({ success: false, message: "Invalid or missing token!" });
+  }
+
+  try {
+    const user = await userModel.findOne({ emailToken: token });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid or expired token!" });
+    }
+
+    // Mark the user as verified and clear the token
+    user.isVerified = true;
+    user.emailToken = null;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Email confirmed successfully! You can now log in.",
+    });
+  } catch (error) {
+    console.error("Error confirming email:", error);
+    res.status(500).json({ success: false, message: "Internal server error!" });
+  }
+};
 
 // Function to log in a user
 const loginUser = async (req, res) => {
@@ -192,6 +227,55 @@ const loginUser = async (req, res) => {
     });
   }
 };
+
+// const updatePassword = async (req, res) => {
+//   const { userId, newPassword } = req.body;
+
+//   if (!userId || !newPassword) {
+//     return res.status(400).json({ success: false, message: "User ID and new password are required!" });
+//   }
+
+//   // 🔹 Validate password strength
+//   if (!validatePassword(newPassword)) {
+//     return res.status(400).json({ success: false, message: "Weak password! Use a mix of letters, numbers, and symbols." });
+//   }
+
+//   try {
+//     const user = await userModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found!" });
+//     }
+
+//     // Check if the new password matches any password in the history
+//     const isReusedPassword = user.passwordHistory.some((oldHash) =>
+//       bcrypt.compareSync(newPassword, oldHash)
+//     );
+//     if (isReusedPassword) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "You cannot reuse a recent password. Please choose a different password.",
+//       });
+//     }
+
+//     // Hash the new password and update the history
+//     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+//     user.password = hashedNewPassword;
+//     user.passwordHistory.push(hashedNewPassword);
+
+//     // Keep only the last 3 passwords in history
+//     if (user.passwordHistory.length > 3) {
+//       user.passwordHistory.shift();
+//     }
+
+//     user.passwordLastUpdated = Date.now();
+//     await user.save();
+
+//     res.status(200).json({ success: true, message: "Password updated successfully!" });
+//   } catch (error) {
+//     console.error("Error updating password:", error);
+//     res.status(500).json({ success: false, message: "Internal server error!" });
+//   }
+// };
 
 // Function to update user details
 const updateUserDetails = async (req, res) => {
@@ -266,41 +350,71 @@ const updateUserDetails = async (req, res) => {
   }
 };
 
-// Function to get user details by user ID
-const getUserDetails = async (req, res) => {
-  const { userId } = req.query;
 
-  // Validate the request (ensure userId is provided)
-  if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: "User ID is required!",
-    });
+const updatePassword = async (req, res) => {
+  const { userId, newPassword } = req.body;
+
+  // 🔹 Validate request body
+  if (!userId || !newPassword) {
+    return res.status(400).json({ success: false, message: "User ID and new password are required!" });
   }
 
   try {
-    // Find the user by ID
+    // 🔹 Find user by ID
     const user = await userModel.findById(userId);
     if (!user) {
-      return res.json({
+      return res.status(404).json({ success: false, message: "User not found!" });
+    }
+
+    // 🔹 Check password expiration (90 days policy)
+    const passwordExpiryDays = 90;
+    const daysSinceLastUpdate = (Date.now() - new Date(user.passwordLastUpdated)) / (1000 * 60 * 60 * 24);
+    if (daysSinceLastUpdate > passwordExpiryDays) {
+      return res.status(401).json({ success: false, message: "Your password has expired. Please reset it." });
+    }
+
+    // 🔹 Validate new password strength
+    if (!validatePassword(newPassword)) {
+      return res.status(400).json({ success: false, message: "Weak password! Use a mix of uppercase, lowercase, numbers, and special characters." });
+    }
+
+    // 🔹 Prevent password reuse (Check last 3 passwords)
+    const isReusedPassword = user.passwordHistory.some((oldHash) =>
+      bcrypt.compareSync(newPassword, oldHash)
+    );
+    if (isReusedPassword) {
+      return res.status(400).json({
         success: false,
-        message: "User does not exist!",
+        message: "You cannot reuse a recent password. Please choose a different password.",
       });
     }
 
-    // Send the user data back to the client
-    res.status(201).json({
-      success: true,
-      userData: user,
-    });
+    // 🔹 Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // 🔹 Update Password & Password History
+    user.password = hashedNewPassword;
+    user.passwordHistory.push(hashedNewPassword);
+
+    // Keep only the last 3 passwords in history
+    if (user.passwordHistory.length > 3) {
+      user.passwordHistory.shift();
+    }
+
+    // 🔹 Update password last updated timestamp
+    user.passwordLastUpdated = Date.now();
+
+    // 🔹 Save the updated user data
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password updated successfully!" });
   } catch (error) {
-    console.log(error);
-    res.json({
-      success: false,
-      message: "Internal server error!",
-    });
+    console.error("❌ Error updating password:", error);
+    res.status(500).json({ success: false, message: "Internal server error!" });
   }
 };
+
+module.exports = { updatePassword };
 
 // Function to delete a user by ID
 const userDelete = async (req, res) => {
@@ -464,6 +578,7 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// function getMe requests
 const getMe = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -557,6 +672,7 @@ const verifyOtpAndSetPassword = async (req, res) => {
 module.exports = {
   createUser,
   loginUser,
+  updatePassword,
   updateUserDetails,
   userDelete,
   getUserDetails,
@@ -564,6 +680,7 @@ module.exports = {
   forgotPassword,
   verifyOtpAndSetPassword,
   getMe,
+  confirmEmail
 };
 
 

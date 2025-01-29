@@ -1,17 +1,46 @@
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
+const nodemailer = require("nodemailer");
+const userModel = require("../models/userModel");
 
 // Brute-force prevention: Rate Limiter
 const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 2 * 60 * 1000, // 2 minutes
+  max: 3, // Limit each IP to 3 requests per window
   message: {
     success: false,
     message: "Too many authentication attempts. Please try again later.",
   },
-  standardHeaders: true, // Send rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
+// SMTP Transporter Configuration
+const transporter = nodemailer.createTransport({
+  service: "gmail", // Use your email service (e.g., Gmail)
+  auth: {
+    user: process.env.SMTP_EMAIL, // Your email address
+    pass: process.env.SMTP_PASSWORD, // Your app password
+  },
+});
+
+// Generate OTP and Send Email
+const sendOtpEmail = async (userEmail, otp) => {
+  const mailOptions = {
+    from: `"MyApp Support" <${process.env.SMTP_EMAIL}>`,
+    to: userEmail,
+    subject: "Email Confirmation - OTP Verification",
+    text: `Your OTP code is ${otp}. Please enter this code to verify your email.`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent to ${userEmail}`);
+  } catch (error) {
+    console.error("Error sending OTP email:", error);
+    throw new Error("Unable to send OTP email. Please try again later.");
+  }
+};
 
 // Authentication Guard Middleware
 const authGuard = (req, res, next) => {
@@ -20,7 +49,6 @@ const authGuard = (req, res, next) => {
   // Get the Authorization header
   const authHeader = req.headers.authorization;
 
-  // Check if the Authorization header is present
   if (!authHeader) {
     return res.status(400).json({
       success: false,
@@ -28,25 +56,27 @@ const authGuard = (req, res, next) => {
     });
   }
 
-  // Extract the token (Format: Bearer <token>)
   const token = authHeader.split(" ")[1];
 
-  // Check if the token exists
-  if (!token || token === "") {
+  if (!token) {
     return res.status(400).json({
       success: false,
       message: "Token not found!",
     });
   }
 
-  // Verify the token
   try {
     const decodedUserData = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Attach decoded data to the request object
+    if (!decodedUserData.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email to log in.",
+      });
+    }
+
     req.user = decodedUserData;
 
-    // Proceed to the next middleware or route handler
     next();
   } catch (error) {
     console.error("Authentication Error:", error);
@@ -60,4 +90,5 @@ const authGuard = (req, res, next) => {
 module.exports = {
   authGuard,
   authRateLimiter,
+  sendOtpEmail,
 };

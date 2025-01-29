@@ -1,65 +1,60 @@
-// Importing necessary packages
-const express = require("express"); // Web framework for Node.js
-const dotenv = require("dotenv"); // For managing environment variables
-const cors = require("cors"); // For enabling Cross-Origin Resource Sharing
-const accpetFormData = require("express-fileupload"); // For handling file uploads
-const databaseConnection = require("./database/database"); // Custom module for database connection
-const path = require("path"); // For handling file and directory paths
-const rateLimit = require("express-rate-limit"); // For implementing brute-force prevention
 
-// Configuring environment variables from .env file (make sure this is done before accessing env variables)
+// Importing necessary packages
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const fileUpload = require("express-fileupload");
+const databaseConnection = require("./database/database");
+const path = require("path");
+const rateLimit = require("express-rate-limit");
+
+// Load environment variables
 dotenv.config();
 
-// Creating an Express application instance
+// Create Express application instance
 const app = express();
 
-// Configuring CORS (Cross-Origin Resource Sharing) policy
+// CORS Configuration
 const corsOptions = {
-  origin: true, // Allow all origins
-  credentials: true, // Allow credentials (like cookies) to be sent
-  optionSuccessStatus: 200, // Success status code for preflight requests
+  origin: process.env.CLIENT_URL || "http://localhost:3000", // Ensure frontend URL is set
+  credentials: true,
+  optionSuccessStatus: 200,
 };
+app.use(cors(corsOptions));
 
-app.use(cors(corsOptions)); // Applying CORS middleware
-
-// Middleware to parse incoming JSON requests
+// Middleware for JSON parsing and file uploads
 app.use(express.json());
+app.use(fileUpload());
 
-// Middleware to handle file uploads
-app.use(accpetFormData());
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
+
 
 // Serving static files for product images
 app.use("/products", express.static(path.join(__dirname, "public/products")));
 
-// Connecting to the database
+// Connect to MongoDB
 databaseConnection();
 
-// Brute-force prevention: Rate Limiter
+// Global Rate Limiter (Prevents abuse)
 const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per window
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again after 15 minutes.",
-  },
-  standardHeaders: true, // Include rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { success: false, message: "Too many requests. Try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
-
-// Apply the global rate limiter to all API routes
 app.use("/api", globalRateLimiter);
 
-// Defining the port for the server (default to 5000 if not set in .env)
+// Setting up API routes
+app.use("/api/user", require("./routes/userRoutes"));
+app.use("/api/product", require("./routes/productRoutes"));
+app.use("/api/cart", require("./routes/cartRoutes"));
+
+// Start the server
 const PORT = process.env.PORT || 5000;
-
-// Setting up API routes for different functionalities
-app.use("/api/user", require("./routes/userRoutes")); // User-related routes
-app.use("/api/product", require("./routes/productRoutes")); // Product-related routes
-app.use("/api/cart", require("./routes/cartRoutes")); // Cart-related routes
-
-// Starting the server and listening on the specified port
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}!!!`); // Log message when server starts
+  console.log(`🚀 Server is running on port ${PORT}!!!`);
 });
 
 module.exports = app;
