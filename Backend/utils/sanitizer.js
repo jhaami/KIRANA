@@ -1,5 +1,10 @@
 const sanitize = (input) => {
-    return typeof input === "string" ? input.replace(/[^a-zA-Z0-9@.]/g, "").trim() : input;
+    // Removing script tags and any attempts to inject malicious code
+    let sanitized = input.replace(/<script.*?>.*?<\/script>/gi, '');
+  
+    // Removing special characters
+    sanitized = sanitized.replace(/[!@#$%^&*()+=\-[\]';,/{}|":<>?~]/g, '');
+  
+    return sanitized;
   };
   module.exports = { sanitize };
-  

@@ -2,11 +2,30 @@ import axios from "axios";
 
 
 
+// const Api = axios.create({
+//   baseURL: process.env.REACT_APP_BACKEND_URL || "http://localhost:5000",
+//   withCredentials: true,
+//   headers: { "Content-Type": "application/json" },
+// });
+
 const Api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || "http://localhost:5000",
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
+  baseURL: "http://localhost:5000",
+  withCredentials: true, // Ensure cookies are sent
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`, // Include JWT token
+  },
 });
+
+
+// import axios from "axios";
+
+// // Ensure HTTPS is used for secure requests
+// const Api = axios.create({
+//   baseURL: process.env.REACT_APP_BACKEND_URL || "https://localhost:5000", // Changed to HTTPS
+//   withCredentials: true,
+//   headers: { "Content-Type": "application/json" },
+// });
 
 
 // Test API

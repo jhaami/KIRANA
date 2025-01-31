@@ -4,10 +4,12 @@ import { Link } from "react-router-dom";
 import "../../styles/Register.css";
 import { toast } from "react-toastify";
 import { registerUserApi } from "../../api/Api";
-import zxcvbn from "zxcvbn";
+// import zxcvbn from "zxcvbn";
 
 import registerImg from "../../assets/images/register_cover.jpg";
 import userIcon from "../../assets/images/user.png";
+import PasswordInput from "./PasswordInput";
+
 
 const Register = () => {
   const [fullname, setFullname] = useState("");
@@ -17,7 +19,7 @@ const Register = () => {
   const [usertype, setUserType] = useState("");
   const [password, setPassword] = useState("");
   const [confirmpassword, setConfirmPassword] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState(null);
+  // const [passwordStrength, setPasswordStrength] = useState(null);
 
   const [errors, setErrors] = useState({});
 
@@ -51,13 +53,13 @@ const Register = () => {
       newErrors.usertype = "User Type is required";
       isValid = false;
     }
-    if (!password.trim()) {
-      newErrors.password = "Password is required";
-      isValid = false;
-    } else if (passwordStrength && passwordStrength.score < 2) {
-      newErrors.password = "Password is too weak";
-      isValid = false;
-    }
+    // if (!password.trim()) {
+    //   newErrors.password = "Password is required";
+    //   isValid = false;
+    // } else if (passwordStrength && passwordStrength.score < 2) {
+    //   newErrors.password = "Password is too weak";
+    //   isValid = false;
+    // }
     if (password !== confirmpassword) {
       newErrors.confirmpassword = "Passwords do not match";
       isValid = false;
@@ -71,13 +73,13 @@ const Register = () => {
     return isValid;
   };
 
-  const handlePasswordChange = (e) => {
-    const inputPassword = e.target.value;
-    setPassword(inputPassword);
+  // const handlePasswordChange = (e) => {
+  //   const inputPassword = e.target.value;
+  //   setPassword(inputPassword);
 
-    const strength = zxcvbn(inputPassword);
-    setPasswordStrength(strength);
-  };
+  //   const strength = zxcvbn(inputPassword);
+  //   setPasswordStrength(strength);
+  // };
 
   // const handleSubmit = async (e) => {
   //   e.preventDefault();
@@ -246,12 +248,12 @@ const Register = () => {
                     )}
                   </FormGroup>
 
-                  <FormGroup>
+                  {/* <FormGroup>
                     <input
                       type="password"
                       className="form-control"
                       placeholder="Password"
-                      value={password}
+                      
                       onChange={handlePasswordChange}
                     />
                     {errors.password && (
@@ -268,7 +270,12 @@ const Register = () => {
                         {passwordStrength.feedback.suggestions[0] || ""}
                       </p>
                     )}
-                  </FormGroup>
+                  </FormGroup> */}
+
+                  <FormGroup>
+      <PasswordInput password={password} setPassword={setPassword} setErrors={setErrors} />
+      {errors.password && <p className="">{errors.password}</p>}
+    </FormGroup>
 
                   <FormGroup>
                     <input

@@ -4,3 +4,5 @@ const xss = require("xss-clean");
 const sanitizeMiddleware = xss();
 
 module.exports = sanitizeMiddleware;
+
+

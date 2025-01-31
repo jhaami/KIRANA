@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { encrypt, decrypt } = require("../utils/encryptionHelper");
 
 const userSchema = new mongoose.Schema({
   fullname: {
@@ -14,6 +15,8 @@ const userSchema = new mongoose.Schema({
     type: String, // Changed to String to ensure flexibility for country codes
     required: true,
     unique: true,
+    set: encrypt, 
+    get: decrypt
   },
   password: {
     type: String,
@@ -33,10 +36,7 @@ emailToken: {
   type: String,
   default: null,
 },
-isVerified: {
-  type: Boolean,
-  default: false,
-},
+isVerified:{ type: Boolean, default: false, required: true },
   passwordLastUpdated: {
     type: Date,
     default: Date.now, // Automatically sets the creation date

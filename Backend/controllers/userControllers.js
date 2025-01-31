@@ -7,63 +7,107 @@ const productModel = require("../models/productModel");
 const sentOtp = require("../services/sendOTP");
 const validatePassword = require("../utils/passwordValidator");
 const { encrypt, decrypt } = require("../utils/encryptionHelper");
-const { sanitize } = require("../utils/sanitizer"); // Custom sanitizer utility to sanitize inputs
+// const { sanitize } = require("../utils/sanitizer"); // Custom sanitizer utility to sanitize inputs
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const sanitize = require("mongo-sanitize");
 
 
-// Function to fetch user details
+
+// // Function to fetch user details
+// const getUserDetails = async (req, res) => {
+//   try {
+//     // Fetch user details using the ID from the request parameters
+//     const user = await userModel.findById(req.params.id);
+
+//     // If the user is not found, send a 404 error response
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found!" });
+//     }
+
+//     // Decrypt sensitive fields (e.g., phone number)
+//     const decryptedPhone = decrypt(user.phone);
+
+//     // Send the user data as a response
+//     res.status(200).json({
+//       success: true,
+//       user: { ...user._doc, phone: decryptedPhone }, // Include decrypted phone in the response
+//     });
+//   } catch (error) {
+//     console.error("Error fetching user details:", error);
+
+//     // Send a generic error response for unexpected server issues
+//     res.status(500).json({ success: false, message: "Internal server error." });
+//   }
+// };
+
 const getUserDetails = async (req, res) => {
   try {
-    // Fetch user details using the ID from the request parameters
-    const user = await userModel.findById(req.params.id);
+    // Ensure userId is provided
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID is required!" });
+    }
 
-    // If the user is not found, send a 404 error response
+    // Fetch user from database
+    const user = await userModel.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found!" });
     }
 
-    // Decrypt sensitive fields (e.g., phone number)
-    const decryptedPhone = decrypt(user.phone);
-
-    // Send the user data as a response
     res.status(200).json({
       success: true,
-      user: { ...user._doc, phone: decryptedPhone }, // Include decrypted phone in the response
+      user,
     });
   } catch (error) {
-    console.error("Error fetching user details:", error);
-
-    // Send a generic error response for unexpected server issues
+    console.error("❌ Error fetching user details:", error);
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
+
 // Function to SMTP
+
+
+
+
+// ✅ SMTP Configuration for Sending Email
 const transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: process.env.SMTP_EMAIL, // Your Gmail address
-    pass: process.env.SMTP_PASSWORD, // Your generated App Password
+    user: process.env.SMTP_EMAIL,
+    pass: process.env.SMTP_PASSWORD,
   },
 });
 
-//function to createUser
+// ✅ Password Validation Regex
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+// ✅ Create User with Email Verification
 const createUser = async (req, res) => {
   try {
-    const { fullname, phone, email, username, password, role = "Buyer" } = req.body;
+    // ✅ Sanitize Inputs to Prevent NoSQL Injection
+    const fullname = sanitize(req.body.fullname);
+    const phone = sanitize(req.body.phone);
+    const email = sanitize(req.body.email);
+    const username = sanitize(req.body.username);
+    const password = sanitize(req.body.password);
+    const role = sanitize(req.body.role) || "Buyer";
 
-    // 🔹 Validate required fields
+    // ✅ Validate Required Fields
     if (!fullname || !phone || !email || !username || !password) {
       return res.status(400).json({ success: false, message: "All fields are required!" });
     }
 
-     // 🔹 Validate password strength
-    if (!validatePassword(password)) {
-      return res.status(400).json({ success: false, message: "Weak password! Use a mix of letters, numbers, and symbols." });
-  }  
+    // ✅ Validate Password Strength
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.",
+      });
+    }
 
-    // 🔹 Check if username, email, or phone already exists
+    // ✅ Check if Email, Username, or Phone already exists
     const [existingUser, existingEmail, existingPhone] = await Promise.all([
       userModel.findOne({ username }),
       userModel.findOne({ email }),
@@ -80,13 +124,14 @@ const createUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "Phone number already registered!" });
     }
 
-    // 🔹 Hash the password
+    // ✅ Hash the Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 🔹 Generate email confirmation token
+    // ✅ Generate Email Verification Token (Expires in 1 Hour)
     const emailToken = crypto.randomBytes(32).toString("hex");
+    const emailTokenExpires = Date.now() + 3600000; // 1 hour expiration
 
-    // 🔹 Create new user
+    // ✅ Create User in Database (But Not Verified Yet)
     const newUser = new userModel({
       fullname,
       phone,
@@ -95,45 +140,85 @@ const createUser = async (req, res) => {
       password: hashedPassword,
       role,
       emailToken,
-      isVerified: false,
+      emailTokenExpires,
+      isVerified: false, // ✅ User needs to verify their email
     });
 
     await newUser.save();
 
-    // 🔹 Send confirmation email
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
+    // ✅ Send Confirmation Email
+    // ✅ Send Confirmation Email
+    const confirmationUrl = `${process.env.REACT_APP_BACKEND_URL}/api/user/verify-email?token=${emailToken}`;
 
-    const confirmationUrl = `${process.env.CLIENT_URL}/confirm-email?token=${emailToken}`;
-    const mailOptions = {
-      from: `"Kirana Support" <${process.env.SMTP_EMAIL}>`,
-      to: email,
-      subject: "Email Confirmation - Your Account",
-      html: `
-        <h2>Welcome to Kirana!</h2>
-        <p>Hi ${fullname},</p>
-        <p>Thank you for registering. Please confirm your email by clicking the link below:</p>
-        <a href="${confirmationUrl}" target="_blank">Confirm Email</a>
-        <p>If you did not create an account, please ignore this email.</p>
-      `,
-    };
 
-    await transporter.sendMail(mailOptions);
+  const mailOptions = {
+    from: `"Kirana Support" <${process.env.SMTP_EMAIL}>`,
+    to: email,
+    subject: "Email Confirmation - Your Account",
+    html: `
+      <h2>Welcome to Kirana!</h2>
+      <p>Hi ${fullname},</p>
+      <p>Thank you for registering. Please confirm your email by clicking the link below:</p>
+      <a href="${confirmationUrl}" target="_blank" style="background-color: #27ae60; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+        Confirm Email
+      </a>
+      <p>This link will expire in 1 hour.</p>
+      <p>If you did not create an account, please ignore this email.</p>
+    `,
+  };
 
-    res.status(201).json({
-      success: true,
-      message: "User created successfully! Please check your email to confirm your account.",
-    });
+      await transporter.sendMail(mailOptions);
+
+      res.status(201).json({
+        success: true,
+        message: "User created successfully! Please check your email to confirm your account.",
+      });
+    } catch (error) {
+      console.error("❌ Error creating user:", error);
+      res.status(500).json({ success: false, message: "Internal server error!" });
+    }
+  };
+
+
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).send(`<h2 style="color:red;">❌ Invalid or missing token!</h2>`);
+    }
+
+    const user = await userModel.findOne({ emailToken: token });
+
+    if (!user) {
+      return res.status(400).send(`<h2 style="color:red;">❌ Invalid or expired token!</h2>`);
+    }
+
+    // ✅ Update `isVerified` and clear the token
+    user.isVerified = true;
+    user.emailToken = null;
+    await user.save();
+
+    console.log(`✅ Email verified for: ${user.email}`);
+
+    // ✅ Show success message after verification
+    return res.send(`
+      <div style="text-align:center; padding: 20px; border: 1px solid #ddd; max-width: 500px; margin: auto; font-family: Arial;">
+        <h2 style="color: green;">🎉 Your account has been successfully verified!</h2>
+        <p>You can now log in to your account.</p>
+        <a href="${process.env.REACT_APP_BACKEND_URL}/login" 
+           style="background-color: #27ae60; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">
+           Login Now
+        </a>
+      </div>
+    `);
   } catch (error) {
-    console.error("❌ Error creating user:", error);
-    res.status(500).json({ success: false, message: "Internal server error!" });
+    console.error("❌ Error verifying email:", error);
+    res.status(500).send(`<h2 style="color:red;">❌ Internal Server Error!</h2>`);
   }
 };
+
 
 // Function to confirm email
 const confirmEmail = async (req, res) => {
@@ -164,13 +249,14 @@ const confirmEmail = async (req, res) => {
   }
 };
 
-// Function to log in a user
+
 const loginUser = async (req, res) => {
   // 1. Log the incoming data from the request
   console.log(req.body);
 
-  // 2. Extract the necessary data from the request body
-  const { username, password } = req.body;
+  // 2. Extract and sanitize the necessary data from the request body
+  const username = sanitize(req.body.username);
+  const password = sanitize(req.body.password);
 
   // 3. Validate the extracted data (ensure no field is empty)
   if (!username || !password) {
@@ -184,16 +270,10 @@ const loginUser = async (req, res) => {
     // 4. Check if a user with the provided username exists
     const user = await userModel.findOne({ username: username });
     if (!user) {
-      // return res.status(400).json({
-      //   success: false,
-      //   message: "User does not exist!!!",
-      // });
       return res.json({
         success: false,
         message: "User does not exist!!!",
       });
-      
-
     }
 
     // 5. Compare the provided password with the stored hashed password
@@ -203,10 +283,6 @@ const loginUser = async (req, res) => {
         success: false,
         message: "Incorrect Password!!!",
       });
-      // return res.status(400).json({
-      //   success: false,
-      //   message: "Incorrect Password!!!",
-      // });
     }
 
     // 6. Generate a JWT token for the user
@@ -228,54 +304,8 @@ const loginUser = async (req, res) => {
   }
 };
 
-// const updatePassword = async (req, res) => {
-//   const { userId, newPassword } = req.body;
 
-//   if (!userId || !newPassword) {
-//     return res.status(400).json({ success: false, message: "User ID and new password are required!" });
-//   }
 
-//   // 🔹 Validate password strength
-//   if (!validatePassword(newPassword)) {
-//     return res.status(400).json({ success: false, message: "Weak password! Use a mix of letters, numbers, and symbols." });
-//   }
-
-//   try {
-//     const user = await userModel.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ success: false, message: "User not found!" });
-//     }
-
-//     // Check if the new password matches any password in the history
-//     const isReusedPassword = user.passwordHistory.some((oldHash) =>
-//       bcrypt.compareSync(newPassword, oldHash)
-//     );
-//     if (isReusedPassword) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "You cannot reuse a recent password. Please choose a different password.",
-//       });
-//     }
-
-//     // Hash the new password and update the history
-//     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-//     user.password = hashedNewPassword;
-//     user.passwordHistory.push(hashedNewPassword);
-
-//     // Keep only the last 3 passwords in history
-//     if (user.passwordHistory.length > 3) {
-//       user.passwordHistory.shift();
-//     }
-
-//     user.passwordLastUpdated = Date.now();
-//     await user.save();
-
-//     res.status(200).json({ success: true, message: "Password updated successfully!" });
-//   } catch (error) {
-//     console.error("Error updating password:", error);
-//     res.status(500).json({ success: false, message: "Internal server error!" });
-//   }
-// };
 
 // Function to update user details
 const updateUserDetails = async (req, res) => {
@@ -680,7 +710,9 @@ module.exports = {
   forgotPassword,
   verifyOtpAndSetPassword,
   getMe,
-  confirmEmail
+  confirmEmail,
+  verifyEmail,
+
 };
 
 
