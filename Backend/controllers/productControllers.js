@@ -193,7 +193,7 @@ const addReview = async (req, res) => {
       product.productReviews.length > 0
       ? parseFloat((totalRating / product.productReviews.length).toFixed(1))
       : 0;
-g
+
     // Save the updated product to the database
     await product.save();
 

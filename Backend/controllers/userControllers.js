@@ -447,22 +447,60 @@ const updatePassword = async (req, res) => {
 module.exports = { updatePassword };
 
 // Function to delete a user by ID
+// const userDelete = async (req, res) => {
+//   const { userId } = req.query;
+
+//   // Validate the request (ensure userId is provided)
+//   if (!userId) {
+//     return res.json({
+//       success: false,
+//       message: "User ID is required!",
+//     });
+//   }
+
+//   try {
+//     // Find the user by ID
+//     const user = await userModel.findById(userId);
+//     if (!user) {
+//       return res.json({
+//         success: false,
+//         message: "User does not exist!",
+//       });
+//     }
+
+//     // Delete the user from the database
+//     await userModel.findByIdAndDelete(userId);
+
+//     // Send a success response back to the client
+//     res.json({
+//       success: true,
+//       message: "User deleted successfully!",
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.json({
+//       success: false,
+//       message: "Internal server error!",
+//     });
+//   }
+// };
+
 const userDelete = async (req, res) => {
-  const { userId } = req.query;
+  const { userId } = req.query;  // Consider using req.params for RESTful API if applicable
 
   // Validate the request (ensure userId is provided)
   if (!userId) {
-    return res.json({
+    return res.status(400).json({
       success: false,
       message: "User ID is required!",
     });
   }
 
   try {
-    // Find the user by ID
+    // Find the user by ID to verify existence before deletion
     const user = await userModel.findById(userId);
     if (!user) {
-      return res.json({
+      return res.status(404).json({
         success: false,
         message: "User does not exist!",
       });
@@ -472,13 +510,13 @@ const userDelete = async (req, res) => {
     await userModel.findByIdAndDelete(userId);
 
     // Send a success response back to the client
-    res.json({
+    res.status(200).json({
       success: true,
       message: "User deleted successfully!",
     });
   } catch (error) {
-    console.log(error);
-    res.json({
+    console.error(error);  // Improved error logging
+    res.status(500).json({
       success: false,
       message: "Internal server error!",
     });

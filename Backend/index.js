@@ -10,6 +10,10 @@ const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
 const session = require("express-session");
+// const userController = require('/controllers/userController');
+const rbac = require('./middleware/rbac');
+const { userDelete } = require("./controllers/userControllers");
+// const { userDelete } = require("./controllers/userControllers");
 
 // Load environment variables
 dotenv.config();
@@ -85,9 +89,11 @@ const globalRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 app.use("/api", globalRateLimiter);
+app.delete('/user/:id', rbac(['admin']), userDelete );
 
 // 🔹 Compression (Improves API response time)
 app.use(compression());
+
 
 // 🔹 Setting up API routes
 app.use("/api/user", require("./routes/userRoutes"));
