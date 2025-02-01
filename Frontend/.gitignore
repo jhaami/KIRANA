@@ -12,6 +12,7 @@
 /build
 # Ignore environment files
 *.env
+.env
 
 # misc
 .DS_Store

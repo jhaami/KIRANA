@@ -10,10 +10,13 @@ const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
 const session = require("express-session");
-// const userController = require('/controllers/userController');
-const rbac = require('./middleware/rbac');
-const { userDelete } = require("./controllers/userControllers");
-// const { userDelete } = require("./controllers/userControllers");
+logger = require("./logger");
+// const userRouter = require('./routes/userRoutes'); 
+const userRouter = require('./routes/userRoutes'); // Adjust the path as necessary
+// const logger = require("/logger");
+
+// Use routers
+
 
 // Load environment variables
 dotenv.config();
@@ -21,8 +24,14 @@ dotenv.config();
 // Create Express application instance
 const app = express();
 
+app.use('/api', userRouter);
+// app.use('/api/user', userRouter);
+
 // 🔹 Security Headers (Helmet)
 app.use(helmet());
+app.use(compression());
+app.use(express.json());
+app.use(morgan('dev'));
 
 // 🔹 Secure Session Headers (Prevents Caching of Sensitive Data)
 app.use((req, res, next) => {
@@ -89,7 +98,7 @@ const globalRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 app.use("/api", globalRateLimiter);
-app.delete('/user/:id', rbac(['admin']), userDelete );
+
 
 // 🔹 Compression (Improves API response time)
 app.use(compression());
@@ -111,6 +120,7 @@ app.use((req, res, next) => {
 // 🔹 Global Error Handler (Handles Unexpected Errors)
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err);
+  logger.error("❌ Server Error:", err);
   res.status(500).json({
     success: false,
     message: "Internal server error! Please try again later.",
