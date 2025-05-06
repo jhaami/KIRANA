@@ -27,7 +27,7 @@ const About = () => {
                 </h2>
 
                 <p className="section__description">
-                  At Kirana, our dedication to serving kiranas goes beyond
+                  At Shavvy, our dedication to serving kiranas goes beyond
                   just offering products. We are here to provide comprehensive
                   support, expert advice, and innovative solutions to help you
                   achieve your shopping goals. Your success is our priority.

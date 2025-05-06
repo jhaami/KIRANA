@@ -27,7 +27,7 @@ const Home = () => {
                   <img src={worldImg} alt="" />
                 </div>
                 <h1>
-                  <span className="highlight">Kirana</span> for the future.
+                  <span className="highlight">Shavvy</span> for the future.
                 </h1>
                 <p>
                 Explore the marketplace tailored for modern convenience stores. Whether you're stocking up on everyday essentials, specialty items, or eco-friendly products, you'll find everything you need to enhance your business operations. Shop with confidence, knowing that each product is curated to support your store's success and customer satisfaction.

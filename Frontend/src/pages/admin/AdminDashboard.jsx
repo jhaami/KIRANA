@@ -17,7 +17,7 @@ function AdminDashboard() {
         </Col>
         <Col lg="8">
           <div className="admin__welcome-section">
-            <h1 className="admin__welcome-text">Welcome to Your Kirana Admin Dashboard!</h1>
+            <h1 className="admin__welcome-text">Welcome to Your Shavvy Admin Dashboard!</h1>
             <p className="admin__welcome-subtext">
               Here, you can manage all aspects of your products, orders, and customers.
             </p>

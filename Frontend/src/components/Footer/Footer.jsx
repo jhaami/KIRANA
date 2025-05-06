@@ -105,7 +105,7 @@ export const Footer = () => {
                   </span>
                 </h6>
 
-                <p className="mb-0">kirana@gmail.com</p>
+                <p className="mb-0">shavvy@gmail.com</p>
               </ListGroupItem>
               <ListGroupItem className="ps-0 border-0 d-flex align-items-center gap-3">
                 <h6 className="mb-0 d-flex align-items-center gap-2">
@@ -115,13 +115,13 @@ export const Footer = () => {
                   </span>
                 </h6>
 
-                <p className="mb-0">+977 9810266969</p>
+                <p className="mb-0">+977 9810266****</p>
               </ListGroupItem>
             </ListGroup>
           </Col>
 
           <Col lg='12'>
-            <p className="copyright text-center pt-3"> &copy; {year}, design and developed  by Jemnish Badhadur Nepali. All rights reserved.</p>
+            <p className="copyright text-center pt-3"> &copy; {year}, design and developed  by Amit Jha. All rights reserved.</p>
           </Col>
         </Row>
       </Container>

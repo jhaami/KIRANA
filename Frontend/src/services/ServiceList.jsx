@@ -8,12 +8,12 @@ import customizationImg from "../assets/images/customization.png";
 const ServiceData = [
   {
     imgUrl: weatherImg,
-    title: "Kirana News Updates",
+    title: "Shavvy News Updates",
     desc: 'Stay up-to-date with the latest in shopping through "Kirana News Updates," featuring breakthroughs in Kirana technology, market trends, and policy changes.',
   },
   {
     imgUrl: guideImg,
-    title: "Kirana Articles",
+    title: "Shavvy Articles",
     desc: 'Stay up-to-date with the latest in shopping through "Kirana News Updates," featuring breakthroughs in Kirana technology, market trends, and policy changes.',
   },
   {
